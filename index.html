@@ -298,48 +298,46 @@
 
   // ---------- 注册 Service Worker ----------
   let swRetryCount = 0;
-  const MAX_SW_RETRY = 10;
+  const MAX_SW_RETRY = 5;
 
   async function registerSW() {
     if (!("serviceWorker" in navigator)) {
-      updateSWStatus("off", "浏览器不支持");
+      updateSWStatus("off", "浏览器不支持 SW");
       return;
     }
     try {
-      // 如果已有旧的 SW 注册，先获取
-      const existing = await navigator.serviceWorker.getRegistration();
-      if (existing && existing.active) {
-        swRegistration = existing;
-        updateSWStatus("ok", "后台已就绪");
-        setupSWListeners();
-        setTimeout(syncToSW, 500);
-        return;
+      // 先彻底清理所有旧 SW 注册（桌面视图可能残留无效注册）
+      const allRegs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of allRegs) {
+        try { await reg.unregister(); } catch(e) {}
       }
 
+      // 注册新的
       swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       updateSWStatus("ok", "后台已就绪");
       setupSWListeners();
 
-      // 等 SW 激活后首次同步
       if (swRegistration.active) {
         setTimeout(syncToSW, 500);
-      } else {
-        const waitActive = () => {
-          if (swRegistration && swRegistration.active) { syncToSW(); return; }
-          setTimeout(waitActive, 200);
-        };
-        waitActive();
+      } else if (swRegistration.installing) {
+        swRegistration.installing.addEventListener("statechange", function() {
+          if (this.state === "activated") { syncToSW(); updateSWStatus("ok", "后台已就绪"); }
+        });
+      } else if (swRegistration.waiting) {
+        swRegistration.waiting.addEventListener("statechange", function() {
+          if (this.state === "activated") { syncToSW(); updateSWStatus("ok", "后台已就绪"); }
+        });
       }
-
     } catch (e) {
-      console.error("SW registration failed:", e);
+      const errMsg = e.message || String(e);
       swRetryCount++;
       if (swRetryCount <= MAX_SW_RETRY) {
-        updateSWStatus("wait", `正在重试 (${swRetryCount}/${MAX_SW_RETRY})...`);
-        // 3 秒后重试
+        updateSWStatus("wait", `重试中 ${swRetryCount}/${MAX_SW_RETRY}`);
         setTimeout(registerSW, 3000);
       } else {
-        updateSWStatus("off", "注册失败，请用手机版 Chrome 打开");
+        let tip = errMsg.substring(0, 50);
+        if (errMsg.includes("secure")) tip = "需 HTTPS";
+        updateSWStatus("off", tip);
       }
     }
   }
