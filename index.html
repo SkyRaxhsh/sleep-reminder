@@ -297,67 +297,89 @@
   }
 
   // ---------- 注册 Service Worker ----------
+  let swRetryCount = 0;
+  const MAX_SW_RETRY = 10;
+
   async function registerSW() {
     if (!("serviceWorker" in navigator)) {
-      updateSWStatus("off", "浏览器不支持 PWA");
+      updateSWStatus("off", "浏览器不支持");
       return;
     }
     try {
+      // 如果已有旧的 SW 注册，先获取
+      const existing = await navigator.serviceWorker.getRegistration();
+      if (existing && existing.active) {
+        swRegistration = existing;
+        updateSWStatus("ok", "后台已就绪");
+        setupSWListeners();
+        setTimeout(syncToSW, 500);
+        return;
+      }
+
       swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      updateSWStatus("ok", "后台服务已就绪");
-
-      // 监听 SW 更新
-      swRegistration.addEventListener("updatefound", () => {
-        const newWorker = swRegistration.installing;
-        if (newWorker) {
-          newWorker.addEventListener("statechange", () => {
-            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-              toast("有新版本可用，刷新页面即可更新");
-            }
-          });
-        }
-      });
-
-      // SW 消息监听
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        const msg = event.data;
-        if (msg.type === "FIRE_LOCK" && msg.data) {
-          showLock(msg.data.label || "该睡觉了");
-        }
-        if (msg.type === "SYNC_REMINDERS") {
-          // SW 请求同步
-          syncToSW();
-        }
-      });
+      updateSWStatus("ok", "后台已就绪");
+      setupSWListeners();
 
       // 等 SW 激活后首次同步
       if (swRegistration.active) {
         setTimeout(syncToSW, 500);
       } else {
-        // 等待激活
         const waitActive = () => {
-          if (swRegistration.active) { syncToSW(); return; }
+          if (swRegistration && swRegistration.active) { syncToSW(); return; }
           setTimeout(waitActive, 200);
         };
         waitActive();
       }
 
-      // 注册 Periodic Background Sync（若浏览器支持）
-      try {
-        if ("periodicSync" in swRegistration) {
-          const status = await navigator.permissions.query({ name: "periodic-background-sync" });
-          if (status.state === "granted") {
-            await swRegistration.periodicSync.register("sleep-reminder-check", {
-              minInterval: 60 * 1000, // 最少每分钟检查一次
-            });
-          }
-        }
-      } catch (e) { /* 浏览器不支持，不影响主要功能 */ }
-
     } catch (e) {
       console.error("SW registration failed:", e);
-      updateSWStatus("off", "注册失败，请用 HTTPS 访问");
+      swRetryCount++;
+      if (swRetryCount <= MAX_SW_RETRY) {
+        updateSWStatus("wait", `正在重试 (${swRetryCount}/${MAX_SW_RETRY})...`);
+        // 3 秒后重试
+        setTimeout(registerSW, 3000);
+      } else {
+        updateSWStatus("off", "注册失败，请用手机版 Chrome 打开");
+      }
     }
+  }
+
+  function setupSWListeners() {
+    if (!swRegistration) return;
+    
+    swRegistration.addEventListener("updatefound", () => {
+      const newWorker = swRegistration.installing;
+      if (newWorker) {
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            toast("有新版本可用，刷新页面即可更新");
+          }
+        });
+      }
+    });
+
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      const msg = event.data;
+      if (msg.type === "FIRE_LOCK" && msg.data) {
+        showLock(msg.data.label || "该睡觉了");
+      }
+      if (msg.type === "SYNC_REMINDERS") {
+        syncToSW();
+      }
+    });
+
+    // 注册 Periodic Background Sync
+    try {
+      if ("periodicSync" in swRegistration) {
+        navigator.permissions.query({ name: "periodic-background-sync" }).then(status => {
+          if (status.state === "granted") {
+            swRegistration.periodicSync.register("sleep-reminder-check", {
+              minInterval: 60 * 1000,
+            }).catch(() => {});
+          }
+        });
+      }
+    } catch (e) {}
   }
 
   function updateSWStatus(state, tip) {
@@ -563,13 +585,30 @@
   // ---------- 锁屏 ----------
   let lockReminder=null;
   function showLock(label){
+    // Push history state 阻止返回键
+    history.pushState({lock:1}, "", window.location.href);
     $("#lockTitle").textContent="该睡觉了";
     $("#lockMsg").textContent=label||"已到休息时间，把手机放下，闭上眼睛。";
     $("#lock").classList.add("show");
     lockReminder=label;
     document.body.style.overflow="hidden";
+    // 额外发送一次系统通知（requireInteraction，不手动划掉就一直显示）
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("该睡觉了", {
+          body: label || "已到休息时间",
+          tag: "sleep-lock",
+          requireInteraction: true,
+          vibrate: [300, 100, 300, 100, 300],
+        });
+      }
+    } catch(e) {}
   }
   function hideLock(){
+    // 清除 lock history state
+    if (history.state && history.state.lock) {
+      history.back();
+    }
     $("#lock").classList.remove("show");
     document.body.style.overflow="";
     $("#holdFill").style.width="0";
@@ -595,11 +634,32 @@
   holdBtn.addEventListener("mouseleave",cancelHold);
   function confirmSleep(){ cancelHold(); hideLock(); toast("🌙 晚安，已记录"); }
   $("#snoozeBtn").onclick=function(){
-    hideLock();
+    // 不隐藏锁屏！只是暂缓，10分钟后如果还没确认则再次强化提醒
     toast("已暂停 10 分钟，到时再提醒");
-    setTimeout(()=>{ if(lockReminder) showLock(lockReminder); }, 10*60*1000);
+    setTimeout(()=>{
+      if (lockReminder) {
+        // 再次弹通知 + 刷新锁屏页面
+        if (swRegistration && swRegistration.active) {
+          swRegistration.active.postMessage({ type: "UPDATE_REMINDERS", reminders });
+        }
+        notify(lockReminder);
+        // 如果锁屏已经被关了（用户强退了），重新显示
+        if (!$("#lock").classList.contains("show")) {
+          showLock(lockReminder);
+        }
+      }
+    }, 10*60*1000);
   }
+  // 禁止所有方式退出锁屏：返回键、下拉、滚动
   $("#lock").addEventListener("touchmove",e=>e.preventDefault(),{passive:false});
+  $("#lock").addEventListener("wheel",e=>e.preventDefault(),{passive:false});
+  // 用 history API 防止返回键退出
+  window.addEventListener("popstate", function(e) {
+    if ($("#lock").classList.contains("show")) {
+      history.pushState(null, "", window.location.href);
+      toast("请长按按钮确认");
+    }
+  });
 
   $("#testBtn").onclick=function(){ showLock("（测试）该睡觉了，别玩手机"); };
 
