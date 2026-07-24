@@ -127,7 +127,7 @@
 <div class="wrap">
   <header>
     <h1>🌙 作息提醒</h1>
-    <span class="pill" id="swPill"><span class="sw-badge wait"></span>后台等待中</span>
+    <span class="pill" id="swPill"><span class="sw-badge wait"></span>提醒运行中</span>
   </header>
 
   <!-- PWA 安装横幅 -->
@@ -161,9 +161,10 @@
   <div id="list"></div>
 
   <div class="tip">
-    <b>🔄 PWA 后台提醒：</b>添加/编辑提醒后会自动同步到后台服务。<br>
-    <b>关掉网页、锁屏后仍会弹系统通知</b>（依赖浏览器后台调度）。<br>
-    点通知可直接打开锁屏页面。
+    <b>⏰ 定时提醒工作原理：</b>页面保持打开（可最小化到后台），每秒检测时间。<br>
+    到点自动弹出系统通知 + 全屏锁屏。<br>
+    <b>锁屏后不操作就一直锁着</b>，直到长按确认。<br>
+    提醒数据保存在本机浏览器，不会上传。
   </div>
 
   <div class="sec">
@@ -185,11 +186,11 @@
     <button class="add" id="testBtn" style="background:var(--card2);color:var(--text)">测试</button>
   </div>
   <div class="item">
-    <div class="info"><div class="l">PWA 状态</div><div class="tag" id="swTip">检测中…</div></div>
-    <button class="add" id="swReloadBtn" style="background:var(--card2);color:var(--text)">刷新</button>
+    <div class="info"><div class="l">提醒状态</div><div class="tag" id="swTip">检测中…</div></div>
+    <span style="padding:8px 12px;color:var(--muted);font-size:12px">自动</span>
   </div>
 
-  <footer>PWA 单文件 · 关网页也能弹提醒 · 数据仅存本机</footer>
+  <footer>PWA 定时提醒 · 数据仅存本机 · 页面保持打开即可</footer>
 </div>
 
 <!-- 添加/编辑弹窗 -->
@@ -239,11 +240,11 @@
   const IDB_NAME = "SleepReminderDB";
   const IDB_VERSION = 1;
 
-  // ---------- SW 管理 ----------
+  // ---------- SW 管理（不再依赖 SW，改用纯前端定时器）----------
   let swRegistration = null;
   let deferredPrompt = null;
 
-  // ---------- IndexedDB（与 SW 共享数据桥）----------
+  // ---------- IndexedDB ----------
   function openIDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(IDB_NAME, IDB_VERSION);
@@ -267,123 +268,14 @@
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       });
-    } catch (e) { /* ignore */ }
-  }
-
-  async function writeFiredToIDB(obj) {
-    try {
-      const db = await openIDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction("state", "readwrite");
-        tx.objectStore("state").put(obj, "fired");
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      });
-    } catch (e) { /* ignore */ }
-  }
-
-  // ---------- 同步提醒到 SW ----------
-  function syncToSW() {
-    if (!swRegistration || !swRegistration.active) return;
-    swRegistration.active.postMessage({ type: "UPDATE_REMINDERS", reminders });
-    writeRemindersToIDB(reminders);
-    // 也同步已触发记录
-    swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: getFired() });
-  }
-
-  function syncFiredToSW() {
-    if (!swRegistration || !swRegistration.active) return;
-    swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: getFired() });
-  }
-
-  // ---------- 注册 Service Worker ----------
-  let swRetryCount = 0;
-  const MAX_SW_RETRY = 5;
-
-  async function registerSW() {
-    if (!("serviceWorker" in navigator)) {
-      updateSWStatus("off", "浏览器不支持 SW");
-      return;
-    }
-    try {
-      // 先彻底清理所有旧 SW 注册（桌面视图可能残留无效注册）
-      const allRegs = await navigator.serviceWorker.getRegistrations();
-      for (const reg of allRegs) {
-        try { await reg.unregister(); } catch(e) {}
-      }
-
-      // 注册新的
-      swRegistration = await navigator.serviceWorker.register("/sw-v2.js", { scope: "/" });
-      updateSWStatus("ok", "后台已就绪");
-      setupSWListeners();
-
-      if (swRegistration.active) {
-        setTimeout(syncToSW, 500);
-      } else if (swRegistration.installing) {
-        swRegistration.installing.addEventListener("statechange", function() {
-          if (this.state === "activated") { syncToSW(); updateSWStatus("ok", "后台已就绪"); }
-        });
-      } else if (swRegistration.waiting) {
-        swRegistration.waiting.addEventListener("statechange", function() {
-          if (this.state === "activated") { syncToSW(); updateSWStatus("ok", "后台已就绪"); }
-        });
-      }
-    } catch (e) {
-      const errMsg = e.message || String(e);
-      swRetryCount++;
-      if (swRetryCount <= MAX_SW_RETRY) {
-        updateSWStatus("wait", `重试中 ${swRetryCount}/${MAX_SW_RETRY}`);
-        setTimeout(registerSW, 3000);
-      } else {
-        let tip = errMsg.substring(0, 50);
-        if (errMsg.includes("secure")) tip = "需 HTTPS";
-        updateSWStatus("off", tip);
-      }
-    }
-  }
-
-  function setupSWListeners() {
-    if (!swRegistration) return;
-    
-    swRegistration.addEventListener("updatefound", () => {
-      const newWorker = swRegistration.installing;
-      if (newWorker) {
-        newWorker.addEventListener("statechange", () => {
-          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-            toast("有新版本可用，刷新页面即可更新");
-          }
-        });
-      }
-    });
-
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      const msg = event.data;
-      if (msg.type === "FIRE_LOCK" && msg.data) {
-        showLock(msg.data.label || "该睡觉了");
-      }
-      if (msg.type === "SYNC_REMINDERS") {
-        syncToSW();
-      }
-    });
-
-    // 注册 Periodic Background Sync
-    try {
-      if ("periodicSync" in swRegistration) {
-        navigator.permissions.query({ name: "periodic-background-sync" }).then(status => {
-          if (status.state === "granted") {
-            swRegistration.periodicSync.register("sleep-reminder-check", {
-              minInterval: 60 * 1000,
-            }).catch(() => {});
-          }
-        });
-      }
     } catch (e) {}
   }
 
+  // ---------- 状态显示 ----------
   function updateSWStatus(state, tip) {
     const badge = $("#swPill").querySelector(".sw-badge");
     badge.className = "sw-badge " + state;
-    const labels = { ok: "后台已就绪", wait: "后台等待中", off: "后台未启用" };
+    const labels = { ok: "提醒已就绪", wait: "提醒运行中", off: "提醒未启用" };
     $("#swPill").childNodes[1] && ($("#swPill").childNodes[1].textContent = labels[state] || state);
     $("#swTip").textContent = tip || labels[state] || "";
   }
@@ -493,7 +385,6 @@
   async function save(list){
     localStorage.setItem(LS_KEY, JSON.stringify(list));
     await writeRemindersToIDB(list);
-    syncToSW();
   }
 
   let reminders = [];
@@ -504,8 +395,6 @@
   async function setFired(o){
     firedCache = o;
     localStorage.setItem(FIRED_KEY, JSON.stringify(o));
-    await writeFiredToIDB(o);
-    syncFiredToSW();
   }
 
   // ---------- 时钟 ----------
@@ -636,12 +525,7 @@
     toast("已暂停 10 分钟，到时再提醒");
     setTimeout(()=>{
       if (lockReminder) {
-        // 再次弹通知 + 刷新锁屏页面
-        if (swRegistration && swRegistration.active) {
-          swRegistration.active.postMessage({ type: "UPDATE_REMINDERS", reminders });
-        }
         notify(lockReminder);
-        // 如果锁屏已经被关了（用户强退了），重新显示
         if (!$("#lock").classList.contains("show")) {
           showLock(lockReminder);
         }
@@ -716,54 +600,36 @@
     clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
   }
 
-  // ---------- SW 重载 ----------
-  $("#swReloadBtn").onclick = async () => {
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) {
-        await reg.update();
-        toast("后台服务已刷新");
-        updateSWStatus("ok", "后台服务已就绪");
-        setTimeout(syncToSW, 500);
-      } else {
-        await registerSW();
-      }
-    } catch (e) {
-      toast("刷新失败: " + e.message);
+  // ---------- 页面保活 ----------
+  function keepAlive() {
+    // 尝试用 Wake Lock 防止屏幕关闭（如果支持）
+    if ("wakeLock" in navigator) {
+      try {
+        navigator.wakeLock.request("screen").catch(() => {});
+      } catch(e) {}
     }
-  };
+    updateSWStatus("ok", "定时检测运行中");
+  }
 
   // ---------- 启动 ----------
   async function boot() {
-    // 1. 先初始化数据（从 IDB 或 localStorage）
     await initData();
-    // 2. 注册 SW
-    await registerSW();
-    // 3. 设置安装提示
     setupInstallPrompt();
-    // 4. 刷新权限状态
     refreshPerm();
-    // 5. 启动时钟
+    keepAlive();
     tick();
     setInterval(tick, 1000);
 
-    // 页面可见性变化时同步
+    // 页面可见时校准 + 尝试保活
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         tick();
-        setTimeout(syncToSW, 200);
+        keepAlive();
       }
     });
 
-    // 定期 ping SW 保持活跃
-    setInterval(() => {
-      if (swRegistration && swRegistration.active) {
-        swRegistration.active.postMessage({ type: "PING" });
-      }
-    }, 30000);
-
-    // 延迟同步到 SW
-    setTimeout(syncToSW, 2000);
+    // 每 5 分钟保活一次
+    setInterval(keepAlive, 5 * 60 * 1000);
   }
 
   boot();
