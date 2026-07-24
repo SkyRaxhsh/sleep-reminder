@@ -313,7 +313,7 @@
       }
 
       // 注册新的
-      swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      swRegistration = await navigator.serviceWorker.register("/sw-v2.js", { scope: "/" });
       updateSWStatus("ok", "后台已就绪");
       setupSWListeners();
 
