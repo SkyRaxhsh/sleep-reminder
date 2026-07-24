@@ -27,23 +27,18 @@
   header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.5px}
   header .pill{font-size:12px;color:var(--muted);background:var(--card);padding:5px 10px;border-radius:999px}
 
-  /* 安装横幅 */
   .banner{background:linear-gradient(135deg,#2a3d7a,#1a2752);border:1px solid var(--accent);border-radius:14px;
     padding:12px 14px;margin:8px 0;display:none;align-items:center;gap:10px}
   .banner.show{display:flex}
   .banner .txt{flex:1;font-size:13px;line-height:1.5}
   .banner button{background:var(--accent);color:#0b1020;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;white-space:nowrap}
   .banner .close{background:none;color:var(--muted);font-size:18px;padding:4px 8px}
-  .banner.manual .txt{color:var(--warn)}
-  .banner.manual{border-color:var(--warn)}
 
-  /* 时钟 */
   .clock{text-align:center;margin:10px 0 4px}
   .clock .t{font-size:54px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums;
     background:linear-gradient(180deg,#fff,#9fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
   .clock .d{color:var(--muted);font-size:13px;margin-top:-4px}
 
-  /* 下个提醒卡 */
   .next{background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid var(--line);
     border-radius:18px;padding:16px 18px;margin:14px 0;display:flex;align-items:center;gap:14px}
   .next .ico{font-size:30px}
@@ -54,7 +49,6 @@
   .next .cd .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
   .next .cd .sm{font-size:11px;color:var(--muted)}
 
-  /* 列表 */
   .sec{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 8px}
   .sec h2{font-size:14px;color:var(--muted);font-weight:600;margin:0;letter-spacing:.5px}
   .sec .add{background:var(--accent);color:#0b1020;border:none;border-radius:10px;padding:7px 12px;font-weight:700;font-size:13px}
@@ -70,11 +64,10 @@
   .sw input{opacity:0;width:100%;height:100%;margin:0}
   .sw .tk{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.2s;pointer-events:none}
   .sw .tk:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-  .sw input:checked + .tk{background:var(--good)}
-  .sw input:checked + .tk:before{transform:translateX(18px)}
+  .sw input:checked+.tk{background:var(--good)}
+  .sw input:checked+.tk:before{transform:translateX(18px)}
   .item .del{background:none;border:none;color:var(--muted);font-size:18px;padding:4px 6px}
 
-  /* 弹窗 */
   .modal{position:fixed;inset:0;background:rgba(5,8,20,.78);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .modal.show{display:flex}
   .sheet{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:380px}
@@ -95,7 +88,6 @@
     border-radius:12px;padding:12px 14px;margin:16px 0}
   .tip b{color:var(--text)}
 
-  /* 锁屏 */
   #lock{position:fixed;inset:0;z-index:99;background:radial-gradient(120% 90% at 50% 0%,#1b2a55,#070b18);
     display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
     touch-action:none;user-select:none}
@@ -115,8 +107,6 @@
     z-index:80;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   footer{text-align:center;color:var(--muted);font-size:11px;margin:22px 0 6px}
-
-  /* SW 状态指示 */
   .sw-badge{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
   .sw-badge.ok{background:var(--good)}
   .sw-badge.wait{background:var(--warn)}
@@ -127,10 +117,9 @@
 <div class="wrap">
   <header>
     <h1>🌙 作息提醒</h1>
-    <span class="pill" id="swPill"><span class="sw-badge wait"></span>提醒运行中</span>
+    <span class="pill" id="swPill"><span class="sw-badge wait"></span>检测中…</span>
   </header>
 
-  <!-- PWA 安装横幅 -->
   <div class="banner" id="installBanner">
     <div class="txt">📲 <b>添加到主屏幕</b><br>关掉浏览器也能收到提醒</div>
     <button id="installBtn">立即安装</button>
@@ -161,10 +150,10 @@
   <div id="list"></div>
 
   <div class="tip">
-    <b>⏰ 定时提醒工作原理：</b>页面保持打开（可最小化到后台），每秒检测时间。<br>
-    到点自动弹出系统通知 + 全屏锁屏。<br>
-    <b>锁屏后不操作就一直锁着</b>，直到长按确认。<br>
-    提醒数据保存在本机浏览器，不会上传。
+    <b>⏰ 到点自动弹通知 + 锁屏</b><br>
+    关掉浏览器后仍会弹系统通知（需先添加桌面图标）。<br>
+    <b>锁屏后不操作就一直锁着</b>，只能长按确认解锁。<br>
+    提醒数据保存在本机，不上传。
   </div>
 
   <div class="sec">
@@ -178,22 +167,21 @@
     <button class="add" id="directInstallBtn" style="background:var(--good);color:#000;font-size:14px;padding:9px 16px">安装</button>
   </div>
   <div class="item">
-    <div class="info"><div class="l">浏览器通知</div><div class="tag" id="permTip">用于到点弹出系统通知</div></div>
+    <div class="info"><div class="l">浏览器通知</div><div class="tag" id="permTip">到点弹出系统通知</div></div>
     <button class="add" id="permBtn" style="background:var(--card2);color:var(--text)">开启</button>
   </div>
   <div class="item">
-    <div class="info"><div class="l">立刻预览锁屏</div><div class="tag">测试锁屏效果</div></div>
+    <div class="info"><div class="l">立刻预览锁屏</div><div class="tag">测试效果</div></div>
     <button class="add" id="testBtn" style="background:var(--card2);color:var(--text)">测试</button>
   </div>
   <div class="item">
-    <div class="info"><div class="l">提醒状态</div><div class="tag" id="swTip">检测中…</div></div>
+    <div class="info"><div class="l">后台服务</div><div class="tag" id="swTip">检测中…</div></div>
     <span style="padding:8px 12px;color:var(--muted);font-size:12px">自动</span>
   </div>
 
-  <footer>PWA 定时提醒 · 数据仅存本机 · 页面保持打开即可</footer>
+  <footer>PWA · 关浏览器也能弹 · 数据仅存本机</footer>
 </div>
 
-<!-- 添加/编辑弹窗 -->
 <div class="modal" id="modal">
   <div class="sheet">
     <h3 id="modalTitle">添加提醒</h3>
@@ -219,19 +207,77 @@
   </div>
 </div>
 
-<!-- 锁屏 -->
 <div id="lock">
   <div class="moon">🌙</div>
   <div class="title" id="lockTitle">该睡觉了</div>
   <div class="msg" id="lockMsg">已到休息时间，把手机放下，闭上眼睛。</div>
   <div class="hold" id="holdBtn"><div class="fill" id="holdFill"></div><span id="holdTxt">长按确认已上床</span></div>
   <button class="snooze" id="snoozeBtn">稍后再说（10 分钟）</button>
-  <div class="small">PWA 后台提醒 · 点通知即可触发锁屏</div>
+  <div class="small">按返回键无效 · 只能长按确认</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+// ============ 内联 Service Worker（通过 Blob URL 注册，绕过所有 scope/MIME 问题）============
+const SW_CODE = `
+const IDB_NAME="SleepReminderDB",IDB_VERSION=1;
+let reminders=[],checkTimer=null,lastMinute="";
+function pad(n){return n<10?"0"+n:""+n}
+function mins(t){const[h,m]=t.split(":").map(Number);return h*60+m}
+function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(IDB_NAME,IDB_VERSION);req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains("state"))db.createObjectStore("state")};req.onsuccess=e=>resolve(e.target.result);req.onerror=e=>reject(e.target.error)})}
+async function readReminders(){try{const db=await openDB();return new Promise(r=>{const tx=db.transaction("state","readonly"),req=tx.objectStore("state").get("reminders");req.onsuccess=()=>r(req.result||[]);req.onerror=()=>r([])})}catch(e){return[]}}
+async function writeReminders(list){try{const db=await openDB();return new Promise(r=>{const tx=db.transaction("state","readwrite");tx.objectStore("state").put(list,"reminders");tx.oncomplete=()=>r();tx.onerror=()=>r()})}catch(e){}}
+async function readFired(){try{const db=await openDB();return new Promise(r=>{const tx=db.transaction("state","readonly"),req=tx.objectStore("state").get("fired");req.onsuccess=()=>r(req.result||{});req.onerror=()=>r({})})}catch(e){return{}}}
+async function writeFired(obj){try{const db=await openDB();return new Promise(r=>{const tx=db.transaction("state","readwrite");tx.objectStore("state").put(obj,"fired");tx.oncomplete=()=>r();tx.onerror=()=>r()})}catch(e){}}
+
+async function checkAndFire(){
+  if(!reminders||reminders.length===0)return;
+  const now=new Date(),key=pad(now.getHours())+":"+pad(now.getMinutes());
+  if(key===lastMinute)return;
+  const hit=reminders.find(r=>r.on&&r.time===key);
+  if(!hit){lastMinute=key;return}
+  const today=now.toDateString(),fired=await readFired();
+  if(fired[today]&&fired[today][hit.id]){lastMinute=key;return}
+  fired[today]=fired[today]||{};fired[today][hit.id]=1;await writeFired(fired);
+  lastMinute=key;
+  try{
+    await self.registration.showNotification("\\uD83C\\uDF19 \\u4F5C\\u606F\\u63D0\\u9192",{
+      body:hit.label||"\\u65F6\\u95F4\\u5230\\u4E86",
+      icon:"/icon-192.png",badge:"/icon-192.png",
+      tag:"sleep-"+hit.id,
+      requireInteraction:hit.mode==="lock",
+      data:{reminderId:hit.id,mode:hit.mode,label:hit.label,time:hit.time},
+      actions:hit.mode==="lock"?[{action:"snooze",title:"\\u7A0D\\u540E 10 \\u5206\\u949F"},{action:"open",title:"\\u6253\\u5F00\\u67E5\\u770B"}]:[{action:"open",title:"\\u6253\\u5F00\\u67E5\\u770B"}],
+      vibrate:hit.mode==="lock"?[200,100,200,100,200]:[100,50,100]
+    })
+  }catch(e){}
+}
+
+function startTimer(){if(checkTimer)clearInterval(checkTimer);lastMinute="";checkTimer=setInterval(checkAndFire,1000)}
+
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  if(event.action==="snooze"){
+    const data=event.notification.data||{};
+    setTimeout(async()=>{await self.registration.showNotification("\\uD83C\\uDF19 \\u4F5C\\u606F\\u63D0\\u9192",{body:"(\\u6682\\u505C\\u7ED3\\u675F)"+(data.label||"\\u8BE5\\u4F11\\u606F\\u4E86"),icon:"/icon-192.png",tag:"sleep-snooze-"+data.reminderId,requireInteraction:true,data,vibrate:[200,100,200]})},600000);
+    return
+  }
+  event.waitUntil((async()=>{const allClients=await clients.matchAll({type:"window"});if(allClients.length>0){const client=allClients[0];await client.focus();const data=event.notification.data||{};client.postMessage({type:"FIRE_LOCK",data})}else{await clients.openWindow("/")}})())
+});
+
+self.addEventListener("message",async event=>{
+  const msg=event.data;
+  if(msg.type==="UPDATE_REMINDERS"){reminders=msg.reminders||[];await writeReminders(reminders);startTimer()}
+  if(msg.type==="UPDATE_FIRED"){await writeFired(msg.fired||{})}
+  if(msg.type==="SYNC_REMINDERS"&&event.source&&event.source.postMessage){event.source.postMessage({type:"SYNC_REMINDERS"})}
+});
+
+self.addEventListener("install",event=>{event.waitUntil(self.skipWaiting())});
+self.addEventListener("activate",event=>{event.waitUntil((async()=>{await self.clients.claim();reminders=await readReminders();if(reminders.length>0)startTimer()})())});
+self.addEventListener("periodicsync",event=>{if(event.tag==="sleep-check"){event.waitUntil((async()=>{reminders=await readReminders();await checkAndFire()})())}});
+`;
+
 (function(){
   "use strict";
   const $ = s => document.querySelector(s);
@@ -240,7 +286,6 @@
   const IDB_NAME = "SleepReminderDB";
   const IDB_VERSION = 1;
 
-  // ---------- SW 管理（不再依赖 SW，改用纯前端定时器）----------
   let swRegistration = null;
   let deferredPrompt = null;
 
@@ -250,9 +295,7 @@
       const req = indexedDB.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = (e) => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains("state")) {
-          db.createObjectStore("state");
-        }
+        if (!db.objectStoreNames.contains("state")) db.createObjectStore("state");
       };
       req.onsuccess = (e) => resolve(e.target.result);
       req.onerror = (e) => reject(e.target.error);
@@ -271,59 +314,133 @@
     } catch (e) {}
   }
 
-  // ---------- 状态显示 ----------
+  async function readFiredFromIDB() {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readonly");
+        const req = tx.objectStore("state").get("fired");
+        req.onsuccess = () => resolve(req.result || {});
+        req.onerror = () => resolve({});
+      });
+    } catch (e) { return {}; }
+  }
+
+  async function writeFiredToIDB(obj) {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readwrite");
+        tx.objectStore("state").put(obj, "fired");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (e) {}
+  }
+
+  // ---------- 同步到 SW ----------
+  function syncToSW() {
+    if (!swRegistration || !swRegistration.active) return;
+    swRegistration.active.postMessage({ type: "UPDATE_REMINDERS", reminders });
+    swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: getFired() });
+  }
+
+  // ---------- 注册 SW（Blob URL 方式，绕过所有 scope 问题）----------
+  async function registerSW() {
+    if (!("serviceWorker" in navigator)) {
+      updateSWStatus("off", "浏览器不支持");
+      return;
+    }
+
+    try {
+      // 先清理所有旧 SW
+      const oldRegs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of oldRegs) {
+        try { await reg.unregister(); } catch(e) {}
+      }
+
+      // 用 Blob URL 注册 SW（解决 GitHub Pages scope 限制）
+      const blob = new Blob([SW_CODE], { type: "application/javascript" });
+      const blobUrl = URL.createObjectURL(blob);
+
+      swRegistration = await navigator.serviceWorker.register(blobUrl, { scope: "/" });
+      URL.revokeObjectURL(blobUrl);
+
+      updateSWStatus("ok", "后台服务已就绪");
+
+      // 监听消息
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        const msg = event.data;
+        if (msg.type === "FIRE_LOCK" && msg.data) {
+          showLock(msg.data.label || "该睡觉了");
+        }
+        if (msg.type === "SYNC_REMINDERS") {
+          syncToSW();
+        }
+      });
+
+      // 等激活后首次同步
+      const doSync = () => {
+        if (swRegistration && swRegistration.active) { syncToSW(); return; }
+        setTimeout(doSync, 200);
+      };
+      doSync();
+
+      // Periodic Background Sync
+      try {
+        if ("periodicSync" in swRegistration) {
+          const status = await navigator.permissions.query({ name: "periodic-background-sync" });
+          if (status.state === "granted") {
+            swRegistration.periodicSync.register("sleep-check", { minInterval: 60 * 1000 }).catch(() => {});
+          }
+        }
+      } catch (e) {}
+
+    } catch (e) {
+      console.error("SW:", e.message);
+      updateSWStatus("off", "SW注册失败: " + (e.message||"").substring(0,30));
+    }
+  }
+
   function updateSWStatus(state, tip) {
     const badge = $("#swPill").querySelector(".sw-badge");
     badge.className = "sw-badge " + state;
-    const labels = { ok: "提醒已就绪", wait: "提醒运行中", off: "提醒未启用" };
+    const labels = { ok: "后台已就绪", wait: "检测中…", off: "未启用" };
     $("#swPill").childNodes[1] && ($("#swPill").childNodes[1].textContent = labels[state] || state);
     $("#swTip").textContent = tip || labels[state] || "";
   }
 
-  // ---------- PWA 安装提示 ----------
+  // ---------- PWA 安装 ----------
   function setupInstallPrompt() {
-    let hasPrompt = false;
     const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
-
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      hasPrompt = true;
       if (isStandalone) return;
       $("#installItem").style.display = "flex";
       $("#installBanner").classList.add("show");
     });
-
     $("#installBtn").onclick = async () => {
-      if (!deferredPrompt) { toast("正在检测安装状态，请稍等..."); return; }
+      if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const result = await deferredPrompt.userChoice;
       deferredPrompt = null;
       $("#installBanner").classList.remove("show");
-      if (result.outcome === "accepted") {
-        toast("✅ 已添加到手机桌面");
-      }
+      if (result.outcome === "accepted") toast("✅ 已添加到手机桌面");
     };
-
     $("#directInstallBtn").onclick = async () => {
-      if (!deferredPrompt) { toast("正在检测安装状态，请稍等..."); return; }
+      if (!deferredPrompt) { toast("请刷新页面后再试"); return; }
       deferredPrompt.prompt();
       const result = await deferredPrompt.userChoice;
       deferredPrompt = null;
       $("#installItem").style.display = "none";
-      if (result.outcome === "accepted") {
-        toast("✅ 已添加到手机桌面");
-      }
+      if (result.outcome === "accepted") toast("✅ 已添加到手机桌面");
     };
-
-    $("#installClose").onclick = () => { $("#installBanner").classList.remove("show"); };
-
-    if (isStandalone) {
-      updateSWStatus("ok", "PWA 独立模式运行中");
-    }
+    $("#installClose").onclick = () => $("#installBanner").classList.remove("show");
+    if (isStandalone) updateSWStatus("ok", "独立 APP 模式");
   }
 
-  // ---------- 数据：IndexedDB 优先 + localStorage 备份 ----------
+  // ---------- 数据 ----------
   async function readRemindersFromIDB() {
     try {
       const db = await openIDB();
@@ -335,56 +452,31 @@
       });
     } catch (e) { return null; }
   }
-  async function readFiredFromIDB() {
-    try {
-      const db = await openIDB();
-      return new Promise((resolve) => {
-        const tx = db.transaction("state", "readonly");
-        const req = tx.objectStore("state").get("fired");
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => resolve(null);
-      });
-    } catch (e) { return null; }
-  }
 
   async function initData() {
-    // 先尝试从 IDB 读取（更可靠，不受浏览器模式影响）
     let idbReminders = await readRemindersFromIDB();
     let idbFired = await readFiredFromIDB();
-
-    // 再尝试 localStorage（作为备份）
     let lsReminders = null, lsFired = null;
     try { lsReminders = JSON.parse(localStorage.getItem(LS_KEY)) || null; } catch(e) {}
     try { lsFired = JSON.parse(localStorage.getItem(FIRED_KEY)) || null; } catch(e) {}
 
-    // 优先用 IDB 数据，IDB 没有再用 localStorage
     if (idbReminders && idbReminders.length > 0) {
       reminders = idbReminders;
     } else if (lsReminders && lsReminders.length > 0) {
       reminders = lsReminders;
-      // 同步回 IDB
       await writeRemindersToIDB(reminders);
     } else {
-      // 全新用户，创建默认提醒
       reminders = [{id:uid(), time:"23:00", label:"该睡觉了，别玩手机", mode:"lock", on:true}];
       await save(reminders);
     }
-
-    // 同步 fired 记录
-    if (idbFired) {
-      firedCache = idbFired;
-    } else if (lsFired) {
-      firedCache = lsFired;
-      await writeFiredToIDB(firedCache);
-    }
-
-    // 渲染 UI
+    firedCache = idbFired || lsFired || {};
     render(); updateNext();
   }
 
   async function save(list){
     localStorage.setItem(LS_KEY, JSON.stringify(list));
     await writeRemindersToIDB(list);
+    syncToSW();
   }
 
   let reminders = [];
@@ -395,6 +487,10 @@
   async function setFired(o){
     firedCache = o;
     localStorage.setItem(FIRED_KEY, JSON.stringify(o));
+    await writeFiredToIDB(o);
+    if (swRegistration && swRegistration.active) {
+      swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: o });
+    }
   }
 
   // ---------- 时钟 ----------
@@ -409,7 +505,6 @@
     checkFire();
   }
 
-  // ---------- 下个提醒 ----------
   function mins(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
   function updateNext(){
     const d=now(); const cur=d.getHours()*60+d.getMinutes();
@@ -423,11 +518,10 @@
     const hh=Math.floor(diff/60), mm=diff%60, ss=60-d.getSeconds();
     $("#nextLab").textContent = target.label || "提醒";
     $("#nextSub").textContent = "每天 "+target.time + (target.mode==="lock"?" · 锁屏":" · 轻提醒");
-    $("#nextIco").textContent = target.mode==="lock"?"🔒":"⏰";
+    $("#nextIco").textContent = target.mode==="lock"?"[锁]":"[铃]";
     $("#nextCd").textContent = pad(hh)+":"+pad(mm)+":"+pad(ss>0&&ss<60?ss:0);
   }
 
-  // ---------- 触发检测 ----------
   let lastFireKey="";
   async function checkFire(){
     const d=now(); const key=pad(d.getHours())+":"+pad(d.getMinutes());
@@ -445,10 +539,9 @@
   function fire(r){
     notify(r.label);
     if(r.mode==="lock") showLock(r.label);
-    else toast("⏰ "+r.label);
+    else toast("[铃] "+r.label);
   }
 
-  // ---------- 通知 ----------
   function notify(body){
     if(!("Notification" in window)) return;
     if(Notification.permission==="granted"){
@@ -458,11 +551,11 @@
     }
   }
   function refreshPerm(){
-    if(!("Notification" in window)){ $("#permPill").textContent="不支持通知"; $("#permBtn").textContent="不可用"; return; }
+    if(!("Notification" in window)){ $("#permPill").textContent="不支持"; return; }
     const p=Notification.permission;
-    if(p==="granted"){ $("#permPill").textContent="通知已开启"; $("#permBtn").textContent="已开启"; $("#permTip").textContent="到点会弹出系统通知（含后台）"; }
-    else if(p==="denied"){ $("#permPill").textContent="通知被拒绝"; $("#permBtn").textContent="去设置"; $("#permTip").textContent="请在浏览器设置里允许通知"; }
-    else { $("#permPill").textContent="通知未开启"; $("#permBtn").textContent="开启"; }
+    if(p==="granted"){ $("#permTip").textContent="到点会弹出系统通知"; }
+    else if(p==="denied"){ $("#permTip").textContent="请在浏览器设置里允许通知"; }
+    else { $("#permTip").textContent="点击开启通知权限"; }
   }
   $("#permBtn").onclick=function(){
     if(!("Notification" in window)){ toast("当前浏览器不支持通知"); return; }
@@ -472,14 +565,12 @@
   // ---------- 锁屏 ----------
   let lockReminder=null;
   function showLock(label){
-    // Push history state 阻止返回键
     history.pushState({lock:1}, "", window.location.href);
     $("#lockTitle").textContent="该睡觉了";
     $("#lockMsg").textContent=label||"已到休息时间，把手机放下，闭上眼睛。";
     $("#lock").classList.add("show");
     lockReminder=label;
     document.body.style.overflow="hidden";
-    // 额外发送一次系统通知（requireInteraction，不手动划掉就一直显示）
     try {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("该睡觉了", {
@@ -492,15 +583,12 @@
     } catch(e) {}
   }
   function hideLock(){
-    // 清除 lock history state
-    if (history.state && history.state.lock) {
-      history.back();
-    }
+    if (history.state && history.state.lock) history.back();
     $("#lock").classList.remove("show");
     document.body.style.overflow="";
     $("#holdFill").style.width="0";
   }
-  // 长按确认
+
   const holdBtn=$("#holdBtn");
   function startHold(e){
     e.preventDefault();
@@ -521,28 +609,22 @@
   holdBtn.addEventListener("mouseleave",cancelHold);
   function confirmSleep(){ cancelHold(); hideLock(); toast("🌙 晚安，已记录"); }
   $("#snoozeBtn").onclick=function(){
-    // 不隐藏锁屏！只是暂缓，10分钟后如果还没确认则再次强化提醒
     toast("已暂停 10 分钟，到时再提醒");
     setTimeout(()=>{
       if (lockReminder) {
         notify(lockReminder);
-        if (!$("#lock").classList.contains("show")) {
-          showLock(lockReminder);
-        }
+        if (!$("#lock").classList.contains("show")) showLock(lockReminder);
       }
     }, 10*60*1000);
   }
-  // 禁止所有方式退出锁屏：返回键、下拉、滚动
   $("#lock").addEventListener("touchmove",e=>e.preventDefault(),{passive:false});
   $("#lock").addEventListener("wheel",e=>e.preventDefault(),{passive:false});
-  // 用 history API 防止返回键退出
   window.addEventListener("popstate", function(e) {
     if ($("#lock").classList.contains("show")) {
       history.pushState(null, "", window.location.href);
       toast("请长按按钮确认");
     }
   });
-
   $("#testBtn").onclick=function(){ showLock("（测试）该睡觉了，别玩手机"); };
 
   // ---------- 列表 ----------
@@ -589,7 +671,7 @@
     else reminders.push({id:uid(),time,label,mode,on:true});
     save(reminders); render(); updateNext();
     $("#modal").classList.remove("show");
-    toast(editing?"已更新 · 已同步后台":"已添加提醒 · 已同步后台");
+    toast(editing?"已更新":"已添加提醒");
   };
   $("#modal").addEventListener("click",e=>{ if(e.target.id==="modal") $("#modal").classList.remove("show"); });
 
@@ -600,36 +682,21 @@
     clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
   }
 
-  // ---------- 页面保活 ----------
-  function keepAlive() {
-    // 尝试用 Wake Lock 防止屏幕关闭（如果支持）
-    if ("wakeLock" in navigator) {
-      try {
-        navigator.wakeLock.request("screen").catch(() => {});
-      } catch(e) {}
-    }
-    updateSWStatus("ok", "定时检测运行中");
-  }
-
   // ---------- 启动 ----------
   async function boot() {
     await initData();
-    setupInstallPrompt();
     refreshPerm();
-    keepAlive();
+    await registerSW();
+    setupInstallPrompt();
     tick();
     setInterval(tick, 1000);
-
-    // 页面可见时校准 + 尝试保活
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
-        tick();
-        keepAlive();
-      }
+      if (!document.hidden) { tick(); syncToSW(); }
     });
-
-    // 每 5 分钟保活一次
-    setInterval(keepAlive, 5 * 60 * 1000);
+    // 每 5 分钟同步一次到 SW
+    setInterval(syncToSW, 5 * 60 * 1000);
+    // 初始同步
+    setTimeout(syncToSW, 3000);
   }
 
   boot();
