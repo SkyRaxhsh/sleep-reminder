@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="作息提醒" />
+<link rel="manifest" href="/manifest.json" />
+<title>作息提醒 · 睡前锁屏</title>
+<style>
+  :root{
+    --bg:#0b1020; --bg2:#121a33; --card:#172244; --card2:#1e2c54;
+    --text:#e8edff; --muted:#8a97c4; --accent:#6c8cff; --accent2:#9b6cff;
+    --good:#3ddc97; --warn:#ffb454; --bad:#ff6b81; --line:#26345f;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(120% 80% at 50% -10%,#1a2752 0%,var(--bg) 55%);
+    color:var(--text);-webkit-font-smoothing:antialiased;overscroll-behavior:none;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));min-height:100%}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 6px}
+  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.5px}
+  header .pill{font-size:12px;color:var(--muted);background:var(--card);padding:5px 10px;border-radius:999px}
+
+  /* 安装横幅 */
+  .banner{background:linear-gradient(135deg,#2a3d7a,#1a2752);border:1px solid var(--accent);border-radius:14px;
+    padding:12px 14px;margin:8px 0;display:none;align-items:center;gap:10px}
+  .banner.show{display:flex}
+  .banner .txt{flex:1;font-size:13px;line-height:1.5}
+  .banner button{background:var(--accent);color:#0b1020;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:13px;white-space:nowrap}
+  .banner .close{background:none;color:var(--muted);font-size:18px;padding:4px 8px}
+  .banner.manual .txt{color:var(--warn)}
+  .banner.manual{border-color:var(--warn)}
+
+  /* 时钟 */
+  .clock{text-align:center;margin:10px 0 4px}
+  .clock .t{font-size:54px;font-weight:800;letter-spacing:1px;font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#fff,#9fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .clock .d{color:var(--muted);font-size:13px;margin-top:-4px}
+
+  /* 下个提醒卡 */
+  .next{background:linear-gradient(135deg,var(--card2),var(--card));border:1px solid var(--line);
+    border-radius:18px;padding:16px 18px;margin:14px 0;display:flex;align-items:center;gap:14px}
+  .next .ico{font-size:30px}
+  .next .meta{flex:1}
+  .next .meta .lab{font-weight:700;font-size:15px}
+  .next .meta .sub{color:var(--muted);font-size:12px;margin-top:3px}
+  .next .cd{text-align:right}
+  .next .cd .big{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--accent)}
+  .next .cd .sm{font-size:11px;color:var(--muted)}
+
+  /* 列表 */
+  .sec{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 8px}
+  .sec h2{font-size:14px;color:var(--muted);font-weight:600;margin:0;letter-spacing:.5px}
+  .sec .add{background:var(--accent);color:#0b1020;border:none;border-radius:10px;padding:7px 12px;font-weight:700;font-size:13px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0;
+    display:flex;align-items:center;gap:12px}
+  .item .tm{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;min-width:62px}
+  .item .info{flex:1}
+  .item .info .l{font-weight:600;font-size:15px}
+  .item .info .tag{font-size:11px;color:var(--muted);margin-top:2px}
+  .item .info .tag.lock{color:var(--bad)}
+  .item .info .tag.soft{color:var(--warn)}
+  .sw{position:relative;width:46px;height:28px;flex:none}
+  .sw input{opacity:0;width:100%;height:100%;margin:0}
+  .sw .tk{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:.2s;pointer-events:none}
+  .sw .tk:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .tk{background:var(--good)}
+  .sw input:checked + .tk:before{transform:translateX(18px)}
+  .item .del{background:none;border:none;color:var(--muted);font-size:18px;padding:4px 6px}
+
+  /* 弹窗 */
+  .modal{position:fixed;inset:0;background:rgba(5,8,20,.78);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.show{display:flex}
+  .sheet{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:20px;width:100%;max-width:380px}
+  .sheet h3{margin:0 0 14px;font-size:17px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .field input[type=text],.field input[type=time]{width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;color:var(--text);padding:11px 12px;font-size:15px}
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:10px;font-size:13px;font-weight:600}
+  .seg button.on{background:var(--card2);color:var(--text);border-color:var(--accent)}
+  .row{display:flex;gap:10px;margin-top:6px}
+  .row button{flex:1;border:none;border-radius:12px;padding:13px;font-weight:700;font-size:15px}
+  .btn-ghost{background:var(--card);color:var(--text)}
+  .btn-main{background:var(--accent);color:#0b1020}
+
+  .tip{color:var(--muted);font-size:12px;line-height:1.6;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;margin:16px 0}
+  .tip b{color:var(--text)}
+
+  /* 锁屏 */
+  #lock{position:fixed;inset:0;z-index:99;background:radial-gradient(120% 90% at 50% 0%,#1b2a55,#070b18);
+    display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;
+    touch-action:none;user-select:none}
+  #lock.show{display:flex}
+  #lock .moon{font-size:70px;animation:float 3s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  #lock .title{font-size:30px;font-weight:800;margin:14px 0 6px}
+  #lock .msg{color:#b9c4ee;font-size:16px;max-width:320px;line-height:1.5}
+  #lock .small{color:var(--muted);font-size:13px;margin-top:26px}
+  .hold{margin-top:18px;width:230px;height:60px;border-radius:30px;background:var(--card2);border:1px solid var(--line);
+    color:var(--text);font-size:15px;font-weight:700;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .hold .fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--good),#2bbf86)}
+  .hold span{position:relative;z-index:2}
+  .snooze{margin-top:16px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:30px;padding:11px 22px;font-size:14px}
+  .toast{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--card2);border:1px solid var(--line);color:var(--text);padding:12px 18px;border-radius:14px;font-size:14px;
+    z-index:80;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{text-align:center;color:var(--muted);font-size:11px;margin:22px 0 6px}
+
+  /* SW 状态指示 */
+  .sw-badge{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .sw-badge.ok{background:var(--good)}
+  .sw-badge.wait{background:var(--warn)}
+  .sw-badge.off{background:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌙 作息提醒</h1>
+    <span class="pill" id="swPill"><span class="sw-badge wait"></span>后台等待中</span>
+  </header>
+
+  <!-- PWA 安装横幅 -->
+  <div class="banner" id="installBanner">
+    <div class="txt">📲 <b>添加到主屏幕</b><br>关掉浏览器也能收到提醒</div>
+    <button id="installBtn">立即安装</button>
+    <button class="close" id="installClose">✕</button>
+  </div>
+
+  <div class="clock">
+    <div class="t" id="clock">--:--:--</div>
+    <div class="d" id="date">加载中…</div>
+  </div>
+
+  <div class="next" id="nextCard">
+    <div class="ico" id="nextIco">⏰</div>
+    <div class="meta">
+      <div class="lab" id="nextLab">暂无提醒</div>
+      <div class="sub" id="nextSub">点击下方「+ 添加提醒」开始设置</div>
+    </div>
+    <div class="cd">
+      <div class="big" id="nextCd">--:--:--</div>
+      <div class="sm">后触发</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>我的提醒</h2>
+    <button class="add" id="addBtn">+ 添加</button>
+  </div>
+  <div id="list"></div>
+
+  <div class="tip">
+    <b>🔄 PWA 后台提醒：</b>添加/编辑提醒后会自动同步到后台服务。<br>
+    <b>关掉网页、锁屏后仍会弹系统通知</b>（依赖浏览器后台调度）。<br>
+    点通知可直接打开锁屏页面。
+  </div>
+
+  <div class="sec">
+    <h2>设置</h2>
+  </div>
+  <div class="item install-cta" id="installItem" style="display:none">
+    <div class="info">
+      <div class="l" style="color:var(--good)">📱 安装到手机桌面</div>
+      <div class="tag">独立 APP 模式，关掉浏览器也能弹提醒</div>
+    </div>
+    <button class="add" id="directInstallBtn" style="background:var(--good);color:#000;font-size:14px;padding:9px 16px">安装</button>
+  </div>
+  <div class="item">
+    <div class="info"><div class="l">浏览器通知</div><div class="tag" id="permTip">用于到点弹出系统通知</div></div>
+    <button class="add" id="permBtn" style="background:var(--card2);color:var(--text)">开启</button>
+  </div>
+  <div class="item">
+    <div class="info"><div class="l">立刻预览锁屏</div><div class="tag">测试锁屏效果</div></div>
+    <button class="add" id="testBtn" style="background:var(--card2);color:var(--text)">测试</button>
+  </div>
+  <div class="item">
+    <div class="info"><div class="l">PWA 状态</div><div class="tag" id="swTip">检测中…</div></div>
+    <button class="add" id="swReloadBtn" style="background:var(--card2);color:var(--text)">刷新</button>
+  </div>
+
+  <footer>PWA 单文件 · 关网页也能弹提醒 · 数据仅存本机</footer>
+</div>
+
+<!-- 添加/编辑弹窗 -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h3 id="modalTitle">添加提醒</h3>
+    <div class="field">
+      <label>时间</label>
+      <input type="time" id="fTime" value="23:00" />
+    </div>
+    <div class="field">
+      <label>内容</label>
+      <input type="text" id="fLabel" placeholder="例如：该睡觉了 / 喝水 / 吃药" maxlength="20" />
+    </div>
+    <div class="field">
+      <label>触发方式</label>
+      <div class="seg" id="fMode">
+        <button data-mode="lock" class="on">锁屏提醒</button>
+        <button data-mode="soft">轻提醒</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn-ghost" id="fCancel">取消</button>
+      <button class="btn-main" id="fSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 锁屏 -->
+<div id="lock">
+  <div class="moon">🌙</div>
+  <div class="title" id="lockTitle">该睡觉了</div>
+  <div class="msg" id="lockMsg">已到休息时间，把手机放下，闭上眼睛。</div>
+  <div class="hold" id="holdBtn"><div class="fill" id="holdFill"></div><span id="holdTxt">长按确认已上床</span></div>
+  <button class="snooze" id="snoozeBtn">稍后再说（10 分钟）</button>
+  <div class="small">PWA 后台提醒 · 点通知即可触发锁屏</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const LS_KEY = "sleep_reminders_v1";
+  const FIRED_KEY = "sleep_fired_v1";
+  const IDB_NAME = "SleepReminderDB";
+  const IDB_VERSION = 1;
+
+  // ---------- SW 管理 ----------
+  let swRegistration = null;
+  let deferredPrompt = null;
+
+  // ---------- IndexedDB（与 SW 共享数据桥）----------
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("state")) {
+          db.createObjectStore("state");
+        }
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async function writeRemindersToIDB(list) {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readwrite");
+        tx.objectStore("state").put(list, "reminders");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  async function writeFiredToIDB(obj) {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readwrite");
+        tx.objectStore("state").put(obj, "fired");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  // ---------- 同步提醒到 SW ----------
+  function syncToSW() {
+    if (!swRegistration || !swRegistration.active) return;
+    swRegistration.active.postMessage({ type: "UPDATE_REMINDERS", reminders });
+    writeRemindersToIDB(reminders);
+    // 也同步已触发记录
+    swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: getFired() });
+  }
+
+  function syncFiredToSW() {
+    if (!swRegistration || !swRegistration.active) return;
+    swRegistration.active.postMessage({ type: "UPDATE_FIRED", fired: getFired() });
+  }
+
+  // ---------- 注册 Service Worker ----------
+  async function registerSW() {
+    if (!("serviceWorker" in navigator)) {
+      updateSWStatus("off", "浏览器不支持 PWA");
+      return;
+    }
+    try {
+      swRegistration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      updateSWStatus("ok", "后台服务已就绪");
+
+      // 监听 SW 更新
+      swRegistration.addEventListener("updatefound", () => {
+        const newWorker = swRegistration.installing;
+        if (newWorker) {
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              toast("有新版本可用，刷新页面即可更新");
+            }
+          });
+        }
+      });
+
+      // SW 消息监听
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        const msg = event.data;
+        if (msg.type === "FIRE_LOCK" && msg.data) {
+          showLock(msg.data.label || "该睡觉了");
+        }
+        if (msg.type === "SYNC_REMINDERS") {
+          // SW 请求同步
+          syncToSW();
+        }
+      });
+
+      // 等 SW 激活后首次同步
+      if (swRegistration.active) {
+        setTimeout(syncToSW, 500);
+      } else {
+        // 等待激活
+        const waitActive = () => {
+          if (swRegistration.active) { syncToSW(); return; }
+          setTimeout(waitActive, 200);
+        };
+        waitActive();
+      }
+
+      // 注册 Periodic Background Sync（若浏览器支持）
+      try {
+        if ("periodicSync" in swRegistration) {
+          const status = await navigator.permissions.query({ name: "periodic-background-sync" });
+          if (status.state === "granted") {
+            await swRegistration.periodicSync.register("sleep-reminder-check", {
+              minInterval: 60 * 1000, // 最少每分钟检查一次
+            });
+          }
+        }
+      } catch (e) { /* 浏览器不支持，不影响主要功能 */ }
+
+    } catch (e) {
+      console.error("SW registration failed:", e);
+      updateSWStatus("off", "注册失败，请用 HTTPS 访问");
+    }
+  }
+
+  function updateSWStatus(state, tip) {
+    const badge = $("#swPill").querySelector(".sw-badge");
+    badge.className = "sw-badge " + state;
+    const labels = { ok: "后台已就绪", wait: "后台等待中", off: "后台未启用" };
+    $("#swPill").childNodes[1] && ($("#swPill").childNodes[1].textContent = labels[state] || state);
+    $("#swTip").textContent = tip || labels[state] || "";
+  }
+
+  // ---------- PWA 安装提示 ----------
+  function setupInstallPrompt() {
+    let hasPrompt = false;
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      hasPrompt = true;
+      if (isStandalone) return;
+      $("#installItem").style.display = "flex";
+      $("#installBanner").classList.add("show");
+    });
+
+    $("#installBtn").onclick = async () => {
+      if (!deferredPrompt) { toast("正在检测安装状态，请稍等..."); return; }
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      $("#installBanner").classList.remove("show");
+      if (result.outcome === "accepted") {
+        toast("✅ 已添加到手机桌面");
+      }
+    };
+
+    $("#directInstallBtn").onclick = async () => {
+      if (!deferredPrompt) { toast("正在检测安装状态，请稍等..."); return; }
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      $("#installItem").style.display = "none";
+      if (result.outcome === "accepted") {
+        toast("✅ 已添加到手机桌面");
+      }
+    };
+
+    $("#installClose").onclick = () => { $("#installBanner").classList.remove("show"); };
+
+    if (isStandalone) {
+      updateSWStatus("ok", "PWA 独立模式运行中");
+    }
+  }
+
+  // ---------- 数据：IndexedDB 优先 + localStorage 备份 ----------
+  async function readRemindersFromIDB() {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readonly");
+        const req = tx.objectStore("state").get("reminders");
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) { return null; }
+  }
+  async function readFiredFromIDB() {
+    try {
+      const db = await openIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction("state", "readonly");
+        const req = tx.objectStore("state").get("fired");
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (e) { return null; }
+  }
+
+  async function initData() {
+    // 先尝试从 IDB 读取（更可靠，不受浏览器模式影响）
+    let idbReminders = await readRemindersFromIDB();
+    let idbFired = await readFiredFromIDB();
+
+    // 再尝试 localStorage（作为备份）
+    let lsReminders = null, lsFired = null;
+    try { lsReminders = JSON.parse(localStorage.getItem(LS_KEY)) || null; } catch(e) {}
+    try { lsFired = JSON.parse(localStorage.getItem(FIRED_KEY)) || null; } catch(e) {}
+
+    // 优先用 IDB 数据，IDB 没有再用 localStorage
+    if (idbReminders && idbReminders.length > 0) {
+      reminders = idbReminders;
+    } else if (lsReminders && lsReminders.length > 0) {
+      reminders = lsReminders;
+      // 同步回 IDB
+      await writeRemindersToIDB(reminders);
+    } else {
+      // 全新用户，创建默认提醒
+      reminders = [{id:uid(), time:"23:00", label:"该睡觉了，别玩手机", mode:"lock", on:true}];
+      await save(reminders);
+    }
+
+    // 同步 fired 记录
+    if (idbFired) {
+      firedCache = idbFired;
+    } else if (lsFired) {
+      firedCache = lsFired;
+      await writeFiredToIDB(firedCache);
+    }
+
+    // 渲染 UI
+    render(); updateNext();
+  }
+
+  async function save(list){
+    localStorage.setItem(LS_KEY, JSON.stringify(list));
+    await writeRemindersToIDB(list);
+    syncToSW();
+  }
+
+  let reminders = [];
+  let firedCache = {};
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+  function getFired(){ return firedCache; }
+  async function setFired(o){
+    firedCache = o;
+    localStorage.setItem(FIRED_KEY, JSON.stringify(o));
+    await writeFiredToIDB(o);
+    syncFiredToSW();
+  }
+
+  // ---------- 时钟 ----------
+  const WEEK=["周日","周一","周二","周三","周四","周五","周六"];
+  function pad(n){ return n<10?"0"+n:""+n; }
+  function now(){ return new Date(); }
+  function tick(){
+    const d=now();
+    $("#clock").textContent = pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+    $("#date").textContent = d.getFullYear()+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日 "+WEEK[d.getDay()];
+    updateNext();
+    checkFire();
+  }
+
+  // ---------- 下个提醒 ----------
+  function mins(t){ const [h,m]=t.split(":").map(Number); return h*60+m; }
+  function updateNext(){
+    const d=now(); const cur=d.getHours()*60+d.getMinutes();
+    const on=reminders.filter(r=>r.on).sort((a,b)=>mins(a.time)-mins(b.time));
+    if(!on.length){ $("#nextLab").textContent="暂无启用提醒"; $("#nextSub").textContent="添加并启用一个提醒"; $("#nextCd").textContent="--:--:--"; return; }
+    let target=null;
+    for(const r of on){ if(mins(r.time)>cur){ target=r; break; } }
+    if(!target) target=on[0];
+    const tgtMins = mins(target.time) + (target===on[0] && mins(target.time)<=cur ? 1440 : 0);
+    let diff = tgtMins - cur; if(diff<0) diff+=1440;
+    const hh=Math.floor(diff/60), mm=diff%60, ss=60-d.getSeconds();
+    $("#nextLab").textContent = target.label || "提醒";
+    $("#nextSub").textContent = "每天 "+target.time + (target.mode==="lock"?" · 锁屏":" · 轻提醒");
+    $("#nextIco").textContent = target.mode==="lock"?"🔒":"⏰";
+    $("#nextCd").textContent = pad(hh)+":"+pad(mm)+":"+pad(ss>0&&ss<60?ss:0);
+  }
+
+  // ---------- 触发检测 ----------
+  let lastFireKey="";
+  async function checkFire(){
+    const d=now(); const key=pad(d.getHours())+":"+pad(d.getMinutes());
+    if(key===lastFireKey) return;
+    const hit=reminders.find(r=>r.on && r.time===key);
+    if(!hit) return;
+    lastFireKey=key;
+    const today=d.toDateString();
+    const fired=getFired();
+    if(fired[today] && fired[today][hit.id]) return;
+    fired[today]=fired[today]||{}; fired[today][hit.id]=1;
+    await setFired(fired);
+    fire(hit);
+  }
+  function fire(r){
+    notify(r.label);
+    if(r.mode==="lock") showLock(r.label);
+    else toast("⏰ "+r.label);
+  }
+
+  // ---------- 通知 ----------
+  function notify(body){
+    if(!("Notification" in window)) return;
+    if(Notification.permission==="granted"){
+      try{
+        new Notification("作息提醒",{body:body||"时间到",tag:"sleep",requireInteraction:true});
+      }catch(e){}
+    }
+  }
+  function refreshPerm(){
+    if(!("Notification" in window)){ $("#permPill").textContent="不支持通知"; $("#permBtn").textContent="不可用"; return; }
+    const p=Notification.permission;
+    if(p==="granted"){ $("#permPill").textContent="通知已开启"; $("#permBtn").textContent="已开启"; $("#permTip").textContent="到点会弹出系统通知（含后台）"; }
+    else if(p==="denied"){ $("#permPill").textContent="通知被拒绝"; $("#permBtn").textContent="去设置"; $("#permTip").textContent="请在浏览器设置里允许通知"; }
+    else { $("#permPill").textContent="通知未开启"; $("#permBtn").textContent="开启"; }
+  }
+  $("#permBtn").onclick=function(){
+    if(!("Notification" in window)){ toast("当前浏览器不支持通知"); return; }
+    Notification.requestPermission().then(refreshPerm);
+  };
+
+  // ---------- 锁屏 ----------
+  let lockReminder=null;
+  function showLock(label){
+    $("#lockTitle").textContent="该睡觉了";
+    $("#lockMsg").textContent=label||"已到休息时间，把手机放下，闭上眼睛。";
+    $("#lock").classList.add("show");
+    lockReminder=label;
+    document.body.style.overflow="hidden";
+  }
+  function hideLock(){
+    $("#lock").classList.remove("show");
+    document.body.style.overflow="";
+    $("#holdFill").style.width="0";
+  }
+  // 长按确认
+  const holdBtn=$("#holdBtn");
+  function startHold(e){
+    e.preventDefault();
+    const start=Date.now();
+    holdBtn._raf=requestAnimationFrame(function loop(){
+      const p=Math.min(1,(Date.now()-start)/3000);
+      $("#holdFill").style.width=(p*100)+"%";
+      if(p>=1){ confirmSleep(); return; }
+      holdBtn._raf=requestAnimationFrame(loop);
+    });
+  }
+  function cancelHold(){ if(holdBtn._raf) cancelAnimationFrame(holdBtn._raf); $("#holdFill").style.width="0"; }
+  holdBtn.addEventListener("touchstart",startHold,{passive:false});
+  holdBtn.addEventListener("mousedown",startHold);
+  holdBtn.addEventListener("touchend",cancelHold);
+  holdBtn.addEventListener("mouseup",cancelHold);
+  holdBtn.addEventListener("touchcancel",cancelHold);
+  holdBtn.addEventListener("mouseleave",cancelHold);
+  function confirmSleep(){ cancelHold(); hideLock(); toast("🌙 晚安，已记录"); }
+  $("#snoozeBtn").onclick=function(){
+    hideLock();
+    toast("已暂停 10 分钟，到时再提醒");
+    setTimeout(()=>{ if(lockReminder) showLock(lockReminder); }, 10*60*1000);
+  }
+  $("#lock").addEventListener("touchmove",e=>e.preventDefault(),{passive:false});
+
+  $("#testBtn").onclick=function(){ showLock("（测试）该睡觉了，别玩手机"); };
+
+  // ---------- 列表 ----------
+  function render(){
+    const box=$("#list"); box.innerHTML="";
+    if(!reminders.length){ box.innerHTML='<div class="tip">还没有提醒，点右上角「+ 添加」。</div>'; return; }
+    reminders.slice().sort((a,b)=>mins(a.time)-mins(b.time)).forEach(r=>{
+      const el=document.createElement("div"); el.className="item";
+      el.innerHTML=`
+        <div class="tm">${r.time}</div>
+        <div class="info">
+          <div class="l">${escapeHtml(r.label||"提醒")}</div>
+          <div class="tag ${r.mode}">${r.mode==="lock"?"[锁] 锁屏提醒":"[铃] 轻提醒"}</div>
+        </div>
+        <label class="sw"><input type="checkbox" ${r.on?"checked":""}><span class="tk"></span></label>
+        <button class="del">✕</button>`;
+      el.querySelector("input").onchange=function(){ r.on=this.checked; save(reminders); updateNext(); };
+      el.querySelector(".del").onclick=function(){ reminders=reminders.filter(x=>x.id!==r.id); save(reminders); render(); updateNext(); };
+      el.querySelector(".tm").onclick=()=>openModal(r);
+      el.querySelector(".info").onclick=()=>openModal(r);
+      box.appendChild(el);
+    });
+  }
+  function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+  // ---------- 弹窗 ----------
+  let editing=null, mode="lock";
+  function openModal(r){
+    editing=r||null;
+    $("#modalTitle").textContent = r?"编辑提醒":"添加提醒";
+    $("#fTime").value = r?r.time:"23:00";
+    $("#fLabel").value = r?(r.label||""):"";
+    setMode(r?r.mode:"lock");
+    $("#modal").classList.add("show");
+  }
+  function setMode(m){ mode=m; document.querySelectorAll("#fMode button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m)); }
+  document.querySelectorAll("#fMode button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  $("#addBtn").onclick=()=>openModal(null);
+  $("#fCancel").onclick=()=>$("#modal").classList.remove("show");
+  $("#fSave").onclick=function(){
+    const time=$("#fTime").value, label=$("#fLabel").value.trim()||"提醒";
+    if(!time){ toast("请选择时间"); return; }
+    if(editing){ editing.time=time; editing.label=label; editing.mode=mode; }
+    else reminders.push({id:uid(),time,label,mode,on:true});
+    save(reminders); render(); updateNext();
+    $("#modal").classList.remove("show");
+    toast(editing?"已更新 · 已同步后台":"已添加提醒 · 已同步后台");
+  };
+  $("#modal").addEventListener("click",e=>{ if(e.target.id==="modal") $("#modal").classList.remove("show"); });
+
+  // ---------- toast ----------
+  let toastTimer=null;
+  function toast(msg){
+    const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
+  }
+
+  // ---------- SW 重载 ----------
+  $("#swReloadBtn").onclick = async () => {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        toast("后台服务已刷新");
+        updateSWStatus("ok", "后台服务已就绪");
+        setTimeout(syncToSW, 500);
+      } else {
+        await registerSW();
+      }
+    } catch (e) {
+      toast("刷新失败: " + e.message);
+    }
+  };
+
+  // ---------- 启动 ----------
+  async function boot() {
+    // 1. 先初始化数据（从 IDB 或 localStorage）
+    await initData();
+    // 2. 注册 SW
+    await registerSW();
+    // 3. 设置安装提示
+    setupInstallPrompt();
+    // 4. 刷新权限状态
+    refreshPerm();
+    // 5. 启动时钟
+    tick();
+    setInterval(tick, 1000);
+
+    // 页面可见性变化时同步
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        tick();
+        setTimeout(syncToSW, 200);
+      }
+    });
+
+    // 定期 ping SW 保持活跃
+    setInterval(() => {
+      if (swRegistration && swRegistration.active) {
+        swRegistration.active.postMessage({ type: "PING" });
+      }
+    }, 30000);
+
+    // 延迟同步到 SW
+    setTimeout(syncToSW, 2000);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
